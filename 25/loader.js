@@ -8,6 +8,18 @@ const input = document.getElementById('password');
 const errorEl = document.getElementById('error');
 const submitBtn = form.querySelector('button');
 
+// Remembers a correct password on this device so a returning visitor skips
+// retyping it — plaintext in localStorage, readable by anyone with access
+// to this browser/device. Fine for a party-invite gate (not protecting
+// anything sensitive); don't reuse this password anywhere it would matter.
+const STORAGE_KEY = 'party-password';
+
+// Hidden synchronously (not just on catch) so a returning visitor with a
+// still-valid cached password never even sees the form flash before this
+// swaps it out for the real page.
+const cachedPassword = localStorage.getItem(STORAGE_KEY);
+if (cachedPassword) form.style.visibility = 'hidden';
+
 function b64ToBytes(b64) {
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);
@@ -74,9 +86,23 @@ form.addEventListener('submit', async (event) => {
 
     try {
         const payload = await unlock(input.value);
+        localStorage.setItem(STORAGE_KEY, input.value);
         render(payload);
     } catch {
         errorEl.textContent = "incorrect password.\nare you sure you're invited?";
         submitBtn.disabled = false;
     }
 });
+
+// Runs once on load, before the visitor ever touches the form. A stale
+// cached password (e.g. it was changed since) fails the same clean way a
+// wrong manual guess does — just clear it and fall back to the (now
+// visible) form instead of showing an error nobody asked for.
+if (cachedPassword) {
+    unlock(cachedPassword)
+        .then(render)
+        .catch(() => {
+            localStorage.removeItem(STORAGE_KEY);
+            form.style.visibility = 'visible';
+        });
+}
