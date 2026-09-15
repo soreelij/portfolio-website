@@ -2,6 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /mixtaper-privacy-policy
 
+Disallow: /25
+
 User-agent: GPTBot
 Disallow: /
 
